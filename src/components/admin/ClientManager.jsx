@@ -2,20 +2,24 @@ import { useEffect, useState } from "react";
 
 const API_BASE = "/api/clients";
 
+const EMPTY_FORM = {
+  id: "",
+  userId: "",
+  businessName: "",
+  phone: "",
+  email: "",
+  address: "",
+  status: "active",
+};
+
 export default function ClientManager() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [showForm, setShowForm] = useState(false);
-
-  const [form, setForm] = useState({
-    userId: "",
-    businessName: "",
-    phone: "",
-    email: "",
-    address: "",
-  });
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   useEffect(() => {
     loadClients();
@@ -53,11 +57,44 @@ export default function ClientManager() {
     }));
   }
 
-  async function handleCreate(event) {
+  function openCreateForm() {
+    setEditing(false);
+    setForm(EMPTY_FORM);
+    setMessage("");
+    setShowForm(true);
+  }
+
+  function openEditForm(client) {
+    setEditing(true);
+    setForm({
+      id: client.id || "",
+      userId: client.user_id || "",
+      businessName: client.business_name || "",
+      phone: client.phone || "",
+      email: client.email || "",
+      address: client.address || "",
+      status: client.status || "active",
+    });
+    setMessage("");
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditing(false);
+    setForm(EMPTY_FORM);
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!form.userId.trim() || !form.businessName.trim()) {
-      setMessage("User ID and business name are required");
+    if (!form.businessName.trim()) {
+      setMessage("Business name is required");
+      return;
+    }
+
+    if (!editing && !form.userId.trim()) {
+      setMessage("User ID is required");
       return;
     }
 
@@ -65,38 +102,63 @@ export default function ClientManager() {
     setMessage("");
 
     try {
+      const payload = editing
+        ? {
+            id: form.id,
+            businessName: form.businessName,
+            phone: form.phone,
+            email: form.email,
+            address: form.address,
+            status: form.status,
+          }
+        : {
+            userId: form.userId,
+            businessName: form.businessName,
+            phone: form.phone,
+            email: form.email,
+            address: form.address,
+          };
+
       const response = await fetch(API_BASE, {
-        method: "POST",
+        method: editing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Failed to create client");
+        throw new Error(
+          data?.message ||
+            (editing
+              ? "Failed to update client"
+              : "Failed to create client")
+        );
       }
 
-      setClients((current) => [
-        data.data.client,
-        ...current,
-      ]);
+      if (editing) {
+        setClients((current) =>
+          current.map((client) =>
+            client.id === data.data.client.id
+              ? data.data.client
+              : client
+          )
+        );
+        setMessage("Client updated successfully");
+      } else {
+        setClients((current) => [
+          data.data.client,
+          ...current,
+        ]);
+        setMessage("Client created successfully");
+      }
 
-      setForm({
-        userId: "",
-        businessName: "",
-        phone: "",
-        email: "",
-        address: "",
-      });
-
-      setShowForm(false);
-      setMessage("Client created successfully");
+      closeForm();
     } catch (error) {
-      setMessage(error.message || "Failed to create client");
+      setMessage(error.message || "Operation failed");
     } finally {
       setSaving(false);
     }
@@ -142,16 +204,13 @@ export default function ClientManager() {
         <div>
           <h1 style={styles.title}>Client Management</h1>
           <p style={styles.subtitle}>
-            Create, view and manage your clients.
+            Create, edit and manage your clients.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => {
-            setShowForm((current) => !current);
-            setMessage("");
-          }}
+          onClick={showForm ? closeForm : openCreateForm}
           style={styles.primaryButton}
         >
           {showForm ? "Close Form" : "Add Client"}
@@ -165,21 +224,33 @@ export default function ClientManager() {
       )}
 
       {showForm && (
-        <form onSubmit={handleCreate} style={styles.formCard}>
-          <h2 style={styles.formTitle}>Create Client</h2>
+        <form onSubmit={handleSubmit} style={styles.formCard}>
+          <div style={styles.formHeader}>
+            <h2 style={styles.formTitle}>
+              {editing ? "Edit Client" : "Create Client"}
+            </h2>
+
+            {editing && (
+              <span style={styles.editBadge}>
+                Editing
+              </span>
+            )}
+          </div>
 
           <div style={styles.formGrid}>
-            <div>
-              <label style={styles.label}>User ID</label>
-              <input
-                name="userId"
-                value={form.userId}
-                onChange={handleChange}
-                placeholder="client-001"
-                required
-                style={styles.input}
-              />
-            </div>
+            {!editing && (
+              <div>
+                <label style={styles.label}>User ID</label>
+                <input
+                  name="userId"
+                  value={form.userId}
+                  onChange={handleChange}
+                  placeholder="client-001"
+                  required
+                  style={styles.input}
+                />
+              </div>
+            )}
 
             <div>
               <label style={styles.label}>Business Name</label>
@@ -216,6 +287,22 @@ export default function ClientManager() {
               />
             </div>
 
+            {editing && (
+              <div>
+                <label style={styles.label}>Status</label>
+                <select
+                  name="status"
+                  value={form.status}
+                  onChange={handleChange}
+                  style={styles.input}
+                >
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            )}
+
             <div style={styles.fullWidth}>
               <label style={styles.label}>Address</label>
               <textarea
@@ -229,13 +316,29 @@ export default function ClientManager() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            style={styles.saveButton}
-          >
-            {saving ? "Creating..." : "Create Client"}
-          </button>
+          <div style={styles.formActions}>
+            <button
+              type="button"
+              onClick={closeForm}
+              style={styles.cancelButton}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={saving}
+              style={styles.saveButton}
+            >
+              {saving
+                ? editing
+                  ? "Updating..."
+                  : "Creating..."
+                : editing
+                ? "Update Client"
+                : "Create Client"}
+            </button>
+          </div>
         </form>
       )}
 
@@ -246,7 +349,9 @@ export default function ClientManager() {
         </div>
 
         {loading ? (
-          <div style={styles.empty}>Loading clients...</div>
+          <div style={styles.empty}>
+            Loading clients...
+          </div>
         ) : clients.length === 0 ? (
           <div style={styles.empty}>
             No clients found.
@@ -268,37 +373,70 @@ export default function ClientManager() {
                 {clients.map((client) => (
                   <tr key={client.id}>
                     <td style={styles.td}>
-                      <strong>{client.business_name}</strong>
+                      <strong>
+                        {client.business_name}
+                      </strong>
                     </td>
 
                     <td style={styles.td}>
-                      <div>{client.name || "—"}</div>
+                      <div>
+                        {client.name || "—"}
+                      </div>
                       <small style={styles.small}>
-                        {client.user_email || client.email || "—"}
+                        {client.user_email ||
+                          client.email ||
+                          "—"}
                       </small>
                     </td>
 
                     <td style={styles.td}>
-                      <div>{client.phone || "—"}</div>
+                      <div>
+                        {client.phone || "—"}
+                      </div>
                       <small style={styles.small}>
                         {client.email || "—"}
                       </small>
                     </td>
 
                     <td style={styles.td}>
-                      <span style={styles.status}>
+                      <span
+                        style={{
+                          ...styles.status,
+                          ...(client.status ===
+                          "suspended"
+                            ? styles.suspendedStatus
+                            : client.status ===
+                              "inactive"
+                            ? styles.inactiveStatus
+                            : {}),
+                        }}
+                      >
                         {client.status}
                       </span>
                     </td>
 
                     <td style={styles.td}>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(client.id)}
-                        style={styles.deleteButton}
-                      >
-                        Delete
-                      </button>
+                      <div style={styles.actionGroup}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openEditForm(client)
+                          }
+                          style={styles.editButton}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDelete(client.id)
+                          }
+                          style={styles.deleteButton}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -370,9 +508,25 @@ const styles = {
     borderRadius: "16px",
   },
 
+  formHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "20px",
+  },
+
   formTitle: {
-    margin: "0 0 20px",
+    margin: 0,
     fontSize: "20px",
+  },
+
+  editBadge: {
+    padding: "5px 9px",
+    borderRadius: "999px",
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    fontSize: "12px",
+    fontWeight: 700,
   },
 
   formGrid: {
@@ -401,6 +555,7 @@ const styles = {
     borderRadius: "9px",
     fontSize: "14px",
     outline: "none",
+    background: "#ffffff",
   },
 
   textarea: {
@@ -412,13 +567,30 @@ const styles = {
     fontSize: "14px",
     resize: "vertical",
     outline: "none",
+    fontFamily: "inherit",
+  },
+
+  formActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "10px",
+    marginTop: "20px",
+  },
+
+  cancelButton: {
+    border: "1px solid #cbd5e1",
+    borderRadius: "9px",
+    padding: "11px 16px",
+    background: "#ffffff",
+    color: "#334155",
+    fontWeight: 700,
+    cursor: "pointer",
   },
 
   saveButton: {
-    marginTop: "20px",
     border: 0,
     borderRadius: "9px",
-    padding: "12px 18px",
+    padding: "11px 18px",
     background: "#0f172a",
     color: "#ffffff",
     fontWeight: 700,
@@ -467,7 +639,7 @@ const styles = {
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: "720px",
+    minWidth: "820px",
   },
 
   th: {
@@ -500,6 +672,33 @@ const styles = {
     color: "#047857",
     fontSize: "12px",
     fontWeight: 700,
+  },
+
+  suspendedStatus: {
+    background: "#fff7ed",
+    color: "#c2410c",
+  },
+
+  inactiveStatus: {
+    background: "#f1f5f9",
+    color: "#64748b",
+  },
+
+  actionGroup: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+  },
+
+  editButton: {
+    border: "1px solid #bfdbfe",
+    borderRadius: "8px",
+    padding: "8px 12px",
+    background: "#ffffff",
+    color: "#2563eb",
+    fontSize: "13px",
+    fontWeight: 700,
+    cursor: "pointer",
   },
 
   deleteButton: {
