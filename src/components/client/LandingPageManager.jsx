@@ -1,41 +1,12 @@
 import { useEffect, useState } from "react";
-
-const EMPTY_FORM = {
-  name: "",
-  slug: "",
-  templateId: "template-1",
-};
-
-const TEMPLATES = [
-  {
-    id: "template-1",
-    name: "Template 1",
-  },
-  {
-    id: "template-2",
-    name: "Template 2",
-  },
-  {
-    id: "template-3",
-    name: "Template 3",
-  },
-  {
-    id: "template-4",
-    name: "Template 4",
-  },
-  {
-    id: "template-5",
-    name: "Template 5",
-  },
-];
+import LandingPageEditor from "./LandingPageEditor";
 
 export default function LandingPageManager() {
   const [pages, setPages] = useState([]);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingPage, setEditingPage] = useState(null);
   const [message, setMessage] = useState("");
-  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     loadPages();
@@ -46,7 +17,7 @@ export default function LandingPageManager() {
       setLoading(true);
       setMessage("");
 
-      const response = await fetch("/api/landing-pages", {
+      const response = await fetch("/api/landing-pages/list", {
         credentials: "include",
       });
 
@@ -58,7 +29,13 @@ export default function LandingPageManager() {
         );
       }
 
-      setPages(data?.data?.landingPages || data?.data?.pages || []);
+      const list =
+        data?.data?.landingPages ||
+        data?.data?.pages ||
+        data?.data ||
+        [];
+
+      setPages(Array.isArray(list) ? list : []);
     } catch (error) {
       setMessage(
         error?.message || "Failed to load landing pages"
@@ -68,104 +45,113 @@ export default function LandingPageManager() {
     }
   }
 
-  function handleChange(event) {
-    const { name, value } = event.target;
-
-    setForm((current) => ({
-      ...current,
-      [name]: value,
-    }));
+  function handleCreate() {
+    setEditingPage(null);
+    setMessage("");
+    setShowEditor(true);
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-
-    if (!form.name.trim()) {
-      setMessage("Landing page name is required");
-      return;
-    }
-
-    setSaving(true);
+  function handleEdit(page) {
+    setEditingPage(page);
     setMessage("");
+    setShowEditor(true);
+  }
+
+  function handleSaved() {
+    setShowEditor(false);
+    setEditingPage(null);
+    loadPages();
+  }
+
+  async function handleDelete(page) {
+    const id = page?.id;
+
+    if (!id) return;
+
+    const confirmed = window.confirm(
+      `Delete "${page.name || "this landing page"}"?`
+    );
+
+    if (!confirmed) return;
 
     try {
-      const response = await fetch("/api/landing-pages/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          name: form.name.trim(),
-          slug: form.slug.trim(),
-          templateId: form.templateId,
-        }),
-      });
+      setMessage("");
+
+      const response = await fetch(
+        `/api/landing-pages/delete?id=${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok || !data?.success) {
         throw new Error(
-          data?.message || "Failed to create landing page"
+          data?.message || "Failed to delete landing page"
         );
       }
 
-      const createdPage =
-        data?.data?.landingPage ||
-        data?.data?.page ||
-        data?.data;
-
-      if (createdPage) {
-        setPages((current) => [
-          createdPage,
-          ...current,
-        ]);
-      } else {
-        await loadPages();
-      }
-
-      setForm(EMPTY_FORM);
-      setShowForm(false);
-      setMessage("Landing page created successfully");
+      setMessage("Landing page deleted successfully");
+      await loadPages();
     } catch (error) {
       setMessage(
-        error?.message || "Failed to create landing page"
+        error?.message || "Failed to delete landing page"
       );
-    } finally {
-      setSaving(false);
     }
   }
 
-  function getTemplateName(templateId) {
-    const template = TEMPLATES.find(
-      (item) => item.id === templateId
-    );
+  function getPageId(page) {
+    return page?.id || page?._id;
+  }
 
-    return template?.name || templateId || "Template 1";
+  function getTemplateId(page) {
+    return (
+      page?.template_id ||
+      page?.templateId ||
+      "template-1"
+    );
+  }
+
+  function getStatus(page) {
+    return page?.status || "draft";
+  }
+
+  if (showEditor) {
+    return (
+      <LandingPageEditor
+        pageId={getPageId(editingPage)}
+        onBack={() => {
+          setShowEditor(false);
+          setEditingPage(null);
+        }}
+        onSaved={handleSaved}
+      />
+    );
   }
 
   return (
-    <div style={styles.page}>
+    <section style={styles.page}>
       <div style={styles.header}>
         <div>
+          <div style={styles.badge}>Client Area</div>
+
           <h1 style={styles.title}>
             Landing Pages
           </h1>
 
           <p style={styles.subtitle}>
-            Create and manage your landing pages.
+            Create, edit and manage your landing pages.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => {
-            setShowForm((current) => !current);
-            setMessage("");
-          }}
-          style={styles.primaryButton}
+          onClick={handleCreate}
+          style={styles.createButton}
         >
-          {showForm ? "Close" : "Create Landing Page"}
+          + Create Landing Page
         </button>
       </div>
 
@@ -175,159 +161,112 @@ export default function LandingPageManager() {
         </div>
       )}
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          style={styles.formCard}
-        >
-          <h2 style={styles.formTitle}>
-            Create Landing Page
-          </h2>
-
-          <div style={styles.formGrid}>
-            <div>
-              <label style={styles.label}>
-                Page Name
-              </label>
-
-              <input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="My Landing Page"
-                required
-                style={styles.input}
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>
-                Slug
-              </label>
-
-              <input
-                name="slug"
-                value={form.slug}
-                onChange={handleChange}
-                placeholder="my-landing-page"
-                style={styles.input}
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>
-                Template
-              </label>
-
-              <select
-                name="templateId"
-                value={form.templateId}
-                onChange={handleChange}
-                style={styles.input}
-              >
-                {TEMPLATES.map((template) => (
-                  <option
-                    key={template.id}
-                    value={template.id}
-                  >
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {loading ? (
+        <div style={styles.emptyCard}>
+          <div style={styles.loading}>
+            Loading landing pages...
           </div>
+        </div>
+      ) : pages.length === 0 ? (
+        <div style={styles.emptyCard}>
+          <div style={styles.emptyIcon}>+</div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            style={{
-              ...styles.primaryButton,
-              marginTop: "20px",
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving
-              ? "Creating..."
-              : "Create Landing Page"}
-          </button>
-        </form>
-      )}
-
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h2 style={styles.cardTitle}>
-            Your Landing Pages
+          <h2 style={styles.emptyTitle}>
+            No landing pages yet
           </h2>
+
+          <p style={styles.emptyText}>
+            Create your first landing page to get started.
+          </p>
 
           <button
             type="button"
-            onClick={loadPages}
-            disabled={loading}
-            style={styles.refreshButton}
+            onClick={handleCreate}
+            style={styles.createButton}
           >
-            Refresh
+            Create Your First Landing Page
           </button>
         </div>
+      ) : (
+        <div style={styles.grid}>
+          {pages.map((page) => {
+            const pageId = getPageId(page);
 
-        {loading ? (
-          <div style={styles.empty}>
-            Loading landing pages...
-          </div>
-        ) : pages.length === 0 ? (
-          <div style={styles.empty}>
-            <div style={styles.emptyTitle}>
-              No landing pages yet
-            </div>
-
-            <div style={styles.emptyText}>
-              Create your first landing page to get started.
-            </div>
-          </div>
-        ) : (
-          <div style={styles.list}>
-            {pages.map((page) => (
-              <div
-                key={page.id}
-                style={styles.pageItem}
+            return (
+              <article
+                key={pageId || page.slug || page.name}
+                style={styles.card}
               >
-                <div>
-                  <div style={styles.pageName}>
-                    {page.name ||
-                      page.title ||
-                      "Untitled Landing Page"}
+                <div style={styles.cardTop}>
+                  <div>
+                    <h2 style={styles.cardTitle}>
+                      {page.name || "Untitled Landing Page"}
+                    </h2>
+
+                    <p style={styles.slug}>
+                      /{page.slug || "no-slug"}
+                    </p>
                   </div>
 
-                  <div style={styles.pageMeta}>
-                    Template:{" "}
-                    {getTemplateName(
-                      page.template_id ||
-                        page.templateId
-                    )}
+                  <span
+                    style={{
+                      ...styles.status,
+                      ...(getStatus(page) === "published"
+                        ? styles.published
+                        : styles.draft),
+                    }}
+                  >
+                    {getStatus(page)}
+                  </span>
+                </div>
+
+                <div style={styles.details}>
+                  <div style={styles.detail}>
+                    <span style={styles.detailLabel}>
+                      Template
+                    </span>
+
+                    <strong>
+                      {getTemplateId(page)}
+                    </strong>
                   </div>
 
-                  <div style={styles.pageMeta}>
-                    Status:{" "}
-                    {page.status || "draft"}
+                  <div style={styles.detail}>
+                    <span style={styles.detailLabel}>
+                      Phone
+                    </span>
+
+                    <strong>
+                      {page.phone || "Not set"}
+                    </strong>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  style={styles.secondaryButton}
-                  onClick={() => {
-                    setMessage(
-                      "Landing page editor will be available in the next step."
-                    );
-                  }}
-                >
-                  Edit
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                <div style={styles.actions}>
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(page)}
+                    style={styles.editButton}
+                  >
+                    Edit
+                  </button>
+
+                  {pageId && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(page)}
+                      style={styles.deleteButton}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -336,24 +275,38 @@ const styles = {
     width: "100%",
     maxWidth: "1200px",
     margin: "0 auto",
-    padding: "24px",
+    padding: "32px 24px",
     boxSizing: "border-box",
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    color: "#0f172a",
   },
 
   header: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: "16px",
+    gap: "20px",
     flexWrap: "wrap",
-    marginBottom: "24px",
+    marginBottom: "28px",
+  },
+
+  badge: {
+    display: "inline-block",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    background: "#ecfdf5",
+    color: "#047857",
+    fontSize: "12px",
+    fontWeight: 800,
+    marginBottom: "10px",
   },
 
   title: {
     margin: 0,
-    fontSize: "30px",
-    fontWeight: 800,
-    color: "#0f172a",
+    fontSize: "32px",
+    lineHeight: 1.2,
+    letterSpacing: "-0.03em",
   },
 
   subtitle: {
@@ -362,35 +315,13 @@ const styles = {
     lineHeight: 1.5,
   },
 
-  primaryButton: {
+  createButton: {
     border: 0,
     borderRadius: "10px",
     padding: "12px 18px",
     background: "#0f172a",
     color: "#ffffff",
     fontSize: "14px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
-  secondaryButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "9px",
-    padding: "9px 14px",
-    background: "#ffffff",
-    color: "#0f172a",
-    fontSize: "13px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
-  refreshButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "9px",
-    padding: "8px 13px",
-    background: "#ffffff",
-    color: "#0f172a",
-    fontSize: "13px",
     fontWeight: 700,
     cursor: "pointer",
   },
@@ -404,109 +335,146 @@ const styles = {
     fontSize: "14px",
   },
 
-  formCard: {
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "16px",
-    padding: "24px",
-    marginBottom: "24px",
-  },
-
-  formTitle: {
-    margin: "0 0 20px",
-    fontSize: "20px",
-    color: "#0f172a",
-  },
-
-  formGrid: {
+  grid: {
     display: "grid",
     gridTemplateColumns:
-      "repeat(auto-fit, minmax(220px, 1fr))",
+      "repeat(auto-fill, minmax(280px, 1fr))",
     gap: "18px",
-  },
-
-  label: {
-    display: "block",
-    marginBottom: "7px",
-    fontSize: "14px",
-    fontWeight: 600,
-    color: "#334155",
-  },
-
-  input: {
-    width: "100%",
-    boxSizing: "border-box",
-    padding: "12px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "9px",
-    fontSize: "14px",
-    background: "#ffffff",
-    color: "#0f172a",
   },
 
   card: {
     background: "#ffffff",
     border: "1px solid #e2e8f0",
     borderRadius: "16px",
-    overflow: "hidden",
+    padding: "20px",
+    boxShadow:
+      "0 8px 30px rgba(15, 23, 42, 0.04)",
   },
 
-  cardHeader: {
+  cardTop: {
     display: "flex",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: "12px",
-    padding: "20px 24px",
-    borderBottom: "1px solid #e2e8f0",
+    marginBottom: "20px",
   },
 
   cardTitle: {
     margin: 0,
-    fontSize: "20px",
-    color: "#0f172a",
+    fontSize: "18px",
+    fontWeight: 800,
   },
 
-  empty: {
-    padding: "50px 24px",
-    textAlign: "center",
+  slug: {
+    margin: "6px 0 0",
     color: "#64748b",
+    fontSize: "13px",
+  },
+
+  status: {
+    display: "inline-flex",
+    padding: "5px 9px",
+    borderRadius: "999px",
+    fontSize: "11px",
+    fontWeight: 800,
+    textTransform: "capitalize",
+  },
+
+  published: {
+    background: "#dcfce7",
+    color: "#166534",
+  },
+
+  draft: {
+    background: "#f1f5f9",
+    color: "#475569",
+  },
+
+  details: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "12px",
+    marginBottom: "20px",
+  },
+
+  detail: {
+    padding: "12px",
+    borderRadius: "10px",
+    background: "#f8fafc",
+    overflow: "hidden",
+  },
+
+  detailLabel: {
+    display: "block",
+    marginBottom: "5px",
+    color: "#64748b",
+    fontSize: "11px",
+    textTransform: "uppercase",
+    fontWeight: 700,
+  },
+
+  actions: {
+    display: "flex",
+    gap: "10px",
+    paddingTop: "16px",
+    borderTop: "1px solid #e2e8f0",
+  },
+
+  editButton: {
+    flex: 1,
+    border: 0,
+    borderRadius: "9px",
+    padding: "10px",
+    background: "#0f172a",
+    color: "#ffffff",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  deleteButton: {
+    border: "1px solid #fecaca",
+    borderRadius: "9px",
+    padding: "10px 14px",
+    background: "#ffffff",
+    color: "#dc2626",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  emptyCard: {
+    background: "#ffffff",
+    border: "1px dashed #cbd5e1",
+    borderRadius: "18px",
+    padding: "60px 24px",
+    textAlign: "center",
+  },
+
+  emptyIcon: {
+    width: "48px",
+    height: "48px",
+    margin: "0 auto 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "14px",
+    background: "#f1f5f9",
+    color: "#475569",
+    fontSize: "28px",
+    fontWeight: 400,
   },
 
   emptyTitle: {
-    fontSize: "17px",
-    fontWeight: 700,
-    color: "#334155",
-    marginBottom: "6px",
+    margin: "0 0 8px",
+    fontSize: "20px",
   },
 
   emptyText: {
-    fontSize: "14px",
-  },
-
-  list: {
-    display: "flex",
-    flexDirection: "column",
-  },
-
-  pageItem: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-    padding: "18px 24px",
-    borderBottom: "1px solid #e2e8f0",
-  },
-
-  pageName: {
-    fontSize: "16px",
-    fontWeight: 700,
-    color: "#0f172a",
-    marginBottom: "6px",
-  },
-
-  pageMeta: {
-    fontSize: "13px",
+    margin: "0 0 22px",
     color: "#64748b",
-    marginTop: "3px",
+  },
+
+  loading: {
+    color: "#64748b",
+    padding: "20px",
   },
 };
