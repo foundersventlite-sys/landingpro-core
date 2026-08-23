@@ -5,6 +5,7 @@ const API_BASE = "/api/auth";
 export default function App() {
   const [user, setUser] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [role, setRole] = useState("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,8 +39,11 @@ export default function App() {
     setLoading(true);
     setMessage("");
 
+    const endpoint =
+      role === "admin" ? "admin-login" : "client-login";
+
     try {
-      const response = await fetch(`${API_BASE}/admin-login`, {
+      const response = await fetch(`${API_BASE}/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,7 +84,7 @@ export default function App() {
       setEmail("");
       setPassword("");
       setMessage("");
-    } catch (error) {
+    } catch {
       setMessage("Logout failed");
     } finally {
       setLoading(false);
@@ -107,7 +111,9 @@ export default function App() {
         <header style={styles.header}>
           <div>
             <div style={styles.brand}>LandingPro Core</div>
-            <div style={styles.headerSubtitle}>Admin Panel</div>
+            <div style={styles.headerSubtitle}>
+              {user.role === "admin" ? "Admin Panel" : "Client Panel"}
+            </div>
           </div>
 
           <button
@@ -129,7 +135,8 @@ export default function App() {
             </h1>
 
             <p style={styles.dashboardText}>
-              You are successfully logged in as an administrator.
+              You are successfully logged in as a{" "}
+              {user.role === "admin" ? "administrator" : "client"}.
             </p>
 
             <div style={styles.infoGrid}>
@@ -164,11 +171,43 @@ export default function App() {
       <section style={styles.loginCard}>
         <div style={styles.badge}>LandingPro Core</div>
 
-        <h1 style={styles.title}>Admin Login</h1>
+        <h1 style={styles.title}>
+          {role === "admin" ? "Admin Login" : "Client Login"}
+        </h1>
 
         <p style={styles.subtitle}>
-          Sign in to access the administration panel.
+          Sign in to access your {role === "admin" ? "administration" : "client"} panel.
         </p>
+
+        <div style={styles.roleSwitch}>
+          <button
+            type="button"
+            onClick={() => {
+              setRole("admin");
+              setMessage("");
+            }}
+            style={{
+              ...styles.roleButton,
+              ...(role === "admin" ? styles.activeRoleButton : {}),
+            }}
+          >
+            Admin
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRole("client");
+              setMessage("");
+            }}
+            style={{
+              ...styles.roleButton,
+              ...(role === "client" ? styles.activeRoleButton : {}),
+            }}
+          >
+            Client
+          </button>
+        </div>
 
         <form onSubmit={handleLogin}>
           <label style={styles.label}>Email</label>
@@ -177,7 +216,11 @@ export default function App() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="admin@landingpro.local"
+            placeholder={
+              role === "admin"
+                ? "admin@landingpro.local"
+                : "client@landingpro.local"
+            }
             autoComplete="email"
             required
             style={styles.input}
@@ -272,7 +315,7 @@ const styles = {
   },
 
   subtitle: {
-    margin: "0 0 28px",
+    margin: "0 0 20px",
     color: "#64748b",
     lineHeight: 1.6,
   },
@@ -281,6 +324,33 @@ const styles = {
     margin: 0,
     color: "#64748b",
     lineHeight: 1.6,
+  },
+
+  roleSwitch: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+    marginBottom: "22px",
+    padding: "4px",
+    background: "#f1f5f9",
+    borderRadius: "10px",
+  },
+
+  roleButton: {
+    border: 0,
+    borderRadius: "8px",
+    padding: "10px",
+    background: "transparent",
+    color: "#64748b",
+    fontSize: "14px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  activeRoleButton: {
+    background: "#ffffff",
+    color: "#0f172a",
+    boxShadow: "0 1px 4px rgba(15, 23, 42, 0.08)",
   },
 
   label: {
