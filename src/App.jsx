@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ClientManager from "./components/admin/ClientManager";
 
 const API_BASE = "/api/auth";
 
@@ -10,6 +11,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   useEffect(() => {
     checkSession();
@@ -84,6 +86,7 @@ export default function App() {
       setEmail("");
       setPassword("");
       setMessage("");
+      setActiveSection("dashboard");
     } catch {
       setMessage("Logout failed");
     } finally {
@@ -106,6 +109,40 @@ export default function App() {
   }
 
   if (user) {
+    if (user.role === "admin" && activeSection === "clients") {
+      return (
+        <main style={styles.dashboardPage}>
+          <header style={styles.header}>
+            <div>
+              <div style={styles.brand}>LandingPro Core</div>
+              <div style={styles.headerSubtitle}>Admin Panel</div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loading}
+              style={styles.logoutButton}
+            >
+              {loading ? "Signing out..." : "Logout"}
+            </button>
+          </header>
+
+          <ClientManager />
+
+          <div style={styles.backButtonContainer}>
+            <button
+              type="button"
+              onClick={() => setActiveSection("dashboard")}
+              style={styles.backButton}
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
+        </main>
+      );
+    }
+
     return (
       <main style={styles.dashboardPage}>
         <header style={styles.header}>
@@ -160,6 +197,18 @@ export default function App() {
                 <strong>Active</strong>
               </div>
             </div>
+
+            {user.role === "admin" && (
+              <div style={styles.adminActions}>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("clients")}
+                  style={styles.actionButton}
+                >
+                  Client Management
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -176,7 +225,8 @@ export default function App() {
         </h1>
 
         <p style={styles.subtitle}>
-          Sign in to access your {role === "admin" ? "administration" : "client"} panel.
+          Sign in to access your{" "}
+          {role === "admin" ? "administration" : "client"} panel.
         </p>
 
         <div style={styles.roleSwitch}>
@@ -483,5 +533,37 @@ const styles = {
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     fontWeight: 700,
+  },
+
+  adminActions: {
+    marginTop: "28px",
+    paddingTop: "24px",
+    borderTop: "1px solid #e2e8f0",
+  },
+
+  actionButton: {
+    border: 0,
+    borderRadius: "10px",
+    padding: "12px 18px",
+    background: "#0f172a",
+    color: "#ffffff",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  backButtonContainer: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "0 24px 32px",
+  },
+
+  backButton: {
+    border: "1px solid #cbd5e1",
+    borderRadius: "9px",
+    padding: "10px 16px",
+    background: "#ffffff",
+    color: "#0f172a",
+    fontWeight: 700,
+    cursor: "pointer",
   },
 };
