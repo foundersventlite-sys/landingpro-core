@@ -1,5 +1,3 @@
-import { randomUUID, createHash } from "node:crypto";
-
 export async function onRequestPost(context) {
   try {
     const { request, env } = context;
@@ -59,11 +57,10 @@ export async function onRequestPost(context) {
       );
     }
 
-    const sessionId = randomUUID();
-    const sessionToken = randomUUID();
-    const tokenHash = createHash("sha256")
-      .update(sessionToken)
-      .digest("hex");
+    const sessionId = crypto.randomUUID();
+    const sessionToken = crypto.randomUUID();
+
+    const tokenHash = await hashPassword(sessionToken);
 
     const expiresAt = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000
@@ -102,7 +99,14 @@ export async function onRequestPost(context) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Set-Cookie": `landingpro_session=${sessionToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`,
+          "Set-Cookie": [
+            `landingpro_session=${sessionToken}`,
+            "HttpOnly",
+            "Secure",
+            "SameSite=Lax",
+            "Path=/",
+            "Max-Age=604800",
+          ].join("; "),
         },
       }
     );
@@ -119,12 +123,12 @@ export async function onRequestPost(context) {
   }
 }
 
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password);
+async function hashPassword(value) {
+  const data = new TextEncoder().encode(value);
 
   const hash = await crypto.subtle.digest("SHA-256", data);
 
   return Array.from(new Uint8Array(hash))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
-}
+      }
