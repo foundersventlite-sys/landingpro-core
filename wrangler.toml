@@ -3,3 +3,8 @@ compatibility_date = "2026-08-22"
 
 [assets]
 directory = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "landingpro-db"
+database_id = "3b132a70-1965-4d76-a0b9-3fbcf2c486b0"
