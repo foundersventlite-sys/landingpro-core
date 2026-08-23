@@ -1,20 +1,8 @@
 import { useEffect, useState } from "react";
 import ClientManager from "./components/admin/ClientManager";
-import TemplateRenderer from "./templates/TemplateRenderer";
+import LandingPageManager from "./components/client/LandingPageManager";
 
 const API_BASE = "/api/auth";
-
-const DEMO_TEMPLATE_DATA = {
-  brandName: "LandingPro",
-  productName: "Premium Product",
-  headline: "আপনার পছন্দের পণ্য, এখন আরও সহজে",
-  description:
-    "স্মার্ট ডিজাইন, প্রয়োজনীয় ফিচার এবং নির্ভরযোগ্য মান—সবকিছু একসাথে।",
-  price: "৳1,490",
-  oldPrice: "৳1,790",
-  image: "",
-  buttonText: "এখনই অর্ডার করুন",
-};
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -25,7 +13,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [activeSection, setActiveSection] = useState("dashboard");
-  const [selectedTemplate, setSelectedTemplate] = useState(1);
 
   useEffect(() => {
     checkSession();
@@ -80,6 +67,7 @@ export default function App() {
       setUser(data.data.user);
       setPassword("");
       setMessage("");
+      setActiveSection("dashboard");
     } catch (error) {
       setMessage(error.message || "Something went wrong");
     } finally {
@@ -106,10 +94,6 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function handleOrder() {
-    setMessage("Order action is ready.");
   }
 
   if (checkingSession) {
@@ -176,8 +160,8 @@ export default function App() {
     }
 
     if (
-      user.role === "admin" &&
-      activeSection === "templates"
+      user.role === "client" &&
+      activeSection === "landing-pages"
     ) {
       return (
         <main style={styles.dashboardPage}>
@@ -188,7 +172,7 @@ export default function App() {
               </div>
 
               <div style={styles.headerSubtitle}>
-                Template Preview
+                Client Panel
               </div>
             </div>
 
@@ -202,53 +186,15 @@ export default function App() {
             </button>
           </header>
 
-          <section style={styles.templatePanel}>
-            <div style={styles.templateToolbar}>
-              <div>
-                <h1 style={styles.templateTitle}>
-                  Landing Page Templates
-                </h1>
+          <LandingPageManager
+            clientId={
+              user.client_id ||
+              user.clientId ||
+              user.id
+            }
+          />
 
-                <p style={styles.templateSubtitle}>
-                  Select a template to preview it.
-                </p>
-              </div>
-
-              <div style={styles.templateButtons}>
-                {[1, 2, 3, 4, 5].map((templateNumber) => (
-                  <button
-                    key={templateNumber}
-                    type="button"
-                    onClick={() =>
-                      setSelectedTemplate(templateNumber)
-                    }
-                    style={{
-                      ...styles.templateButton,
-                      ...(selectedTemplate === templateNumber
-                        ? styles.activeTemplateButton
-                        : {}),
-                    }}
-                  >
-                    Template {templateNumber}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={styles.previewFrame}>
-              <TemplateRenderer
-                template={selectedTemplate}
-                data={DEMO_TEMPLATE_DATA}
-                onOrder={handleOrder}
-              />
-            </div>
-
-            {message && (
-              <div style={styles.message}>
-                {message}
-              </div>
-            )}
-
+          <div style={styles.backButtonContainer}>
             <button
               type="button"
               onClick={() =>
@@ -258,7 +204,7 @@ export default function App() {
             >
               ← Back to Dashboard
             </button>
-          </section>
+          </div>
         </main>
       );
     }
@@ -350,15 +296,19 @@ export default function App() {
                 >
                   Client Management
                 </button>
+              </div>
+            )}
 
+            {user.role === "client" && (
+              <div style={styles.adminActions}>
                 <button
                   type="button"
                   onClick={() =>
-                    setActiveSection("templates")
+                    setActiveSection("landing-pages")
                   }
                   style={styles.actionButton}
                 >
-                  Template Preview
+                  Landing Pages
                 </button>
               </div>
             )}
@@ -613,6 +563,16 @@ const styles = {
     cursor: "pointer",
   },
 
+  message: {
+    marginTop: "20px",
+    padding: "12px 14px",
+    borderRadius: "10px",
+    background: "#f1f5f9",
+    color: "#334155",
+    fontSize: "14px",
+    lineHeight: 1.5,
+  },
+
   dashboardPage: {
     minHeight: "100vh",
     background: "#f8fafc",
@@ -708,9 +668,6 @@ const styles = {
   },
 
   adminActions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "12px",
     marginTop: "28px",
     paddingTop: "24px",
     borderTop: "1px solid #e2e8f0",
@@ -740,76 +697,5 @@ const styles = {
     color: "#0f172a",
     fontWeight: 700,
     cursor: "pointer",
-  },
-
-  templatePanel: {
-    width: "100%",
-    boxSizing: "border-box",
-    padding: "28px 24px 40px",
-  },
-
-  templateToolbar: {
-    maxWidth: "1200px",
-    margin: "0 auto 24px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "20px",
-    flexWrap: "wrap",
-  },
-
-  templateTitle: {
-    margin: 0,
-    fontSize: "28px",
-    letterSpacing: "-0.03em",
-  },
-
-  templateSubtitle: {
-    margin: "7px 0 0",
-    color: "#64748b",
-  },
-
-  templateButtons: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-  },
-
-  templateButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    padding: "9px 13px",
-    background: "#ffffff",
-    color: "#334155",
-    fontSize: "12px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
-  activeTemplateButton: {
-    background: "#0f172a",
-    borderColor: "#0f172a",
-    color: "#ffffff",
-  },
-
-  previewFrame: {
-    width: "100%",
-    maxWidth: "1400px",
-    margin: "0 auto 24px",
-    overflow: "hidden",
-    border: "1px solid #e2e8f0",
-    borderRadius: "16px",
-    background: "#ffffff",
-  },
-
-  message: {
-    maxWidth: "1200px",
-    margin: "0 auto 20px",
-    padding: "12px 14px",
-    borderRadius: "10px",
-    background: "#f1f5f9",
-    color: "#334155",
-    fontSize: "14px",
-    lineHeight: 1.5,
   },
 };
