@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-const API_BASE = "/api/clients";
+const ENDPOINTS = {
+  list: "/api/clients/list",
+  create: "/api/clients/create",
+  update: "/api/clients/update",
+  delete: "/api/clients/delete",
+};
 
 const EMPTY_FORM = {
   id: "",
@@ -30,14 +35,17 @@ export default function ClientManager() {
     setMessage("");
 
     try {
-      const response = await fetch(API_BASE, {
+      const response = await fetch(ENDPOINTS.list, {
+        method: "GET",
         credentials: "include",
       });
 
       const data = await response.json();
 
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Failed to load clients");
+        throw new Error(
+          data?.message || "Failed to load clients"
+        );
       }
 
       setClients(data.data?.clients || []);
@@ -66,6 +74,7 @@ export default function ClientManager() {
 
   function openEditForm(client) {
     setEditing(true);
+
     setForm({
       id: client.id || "",
       userId: client.user_id || "",
@@ -75,6 +84,7 @@ export default function ClientManager() {
       address: client.address || "",
       status: client.status || "active",
     });
+
     setMessage("");
     setShowForm(true);
   }
@@ -105,28 +115,33 @@ export default function ClientManager() {
       const payload = editing
         ? {
             id: form.id,
-            businessName: form.businessName,
-            phone: form.phone,
-            email: form.email,
-            address: form.address,
+            businessName: form.businessName.trim(),
+            phone: form.phone.trim(),
+            email: form.email.trim().toLowerCase(),
+            address: form.address.trim(),
             status: form.status,
           }
         : {
-            userId: form.userId,
-            businessName: form.businessName,
-            phone: form.phone,
-            email: form.email,
-            address: form.address,
+            userId: form.userId.trim(),
+            businessName: form.businessName.trim(),
+            phone: form.phone.trim(),
+            email: form.email.trim().toLowerCase(),
+            address: form.address.trim(),
           };
 
-      const response = await fetch(API_BASE, {
-        method: editing ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        editing
+          ? ENDPOINTS.update
+          : ENDPOINTS.create,
+        {
+          method: editing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        }
+      );
 
       const data = await response.json();
 
@@ -147,12 +162,14 @@ export default function ClientManager() {
               : client
           )
         );
+
         setMessage("Client updated successfully");
       } else {
         setClients((current) => [
           data.data.client,
           ...current,
         ]);
+
         setMessage("Client created successfully");
       }
 
@@ -175,7 +192,7 @@ export default function ClientManager() {
 
     try {
       const response = await fetch(
-        `${API_BASE}?id=${encodeURIComponent(clientId)}`,
+        `${ENDPOINTS.delete}?id=${encodeURIComponent(clientId)}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -185,16 +202,22 @@ export default function ClientManager() {
       const data = await response.json();
 
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Failed to delete client");
+        throw new Error(
+          data?.message || "Failed to delete client"
+        );
       }
 
       setClients((current) =>
-        current.filter((client) => client.id !== clientId)
+        current.filter(
+          (client) => client.id !== clientId
+        )
       );
 
       setMessage("Client deleted successfully");
     } catch (error) {
-      setMessage(error.message || "Failed to delete client");
+      setMessage(
+        error.message || "Failed to delete client"
+      );
     }
   }
 
@@ -202,7 +225,10 @@ export default function ClientManager() {
     <section style={styles.container}>
       <div style={styles.topBar}>
         <div>
-          <h1 style={styles.title}>Client Management</h1>
+          <h1 style={styles.title}>
+            Client Management
+          </h1>
+
           <p style={styles.subtitle}>
             Create, edit and manage your clients.
           </p>
@@ -210,7 +236,9 @@ export default function ClientManager() {
 
         <button
           type="button"
-          onClick={showForm ? closeForm : openCreateForm}
+          onClick={
+            showForm ? closeForm : openCreateForm
+          }
           style={styles.primaryButton}
         >
           {showForm ? "Close Form" : "Add Client"}
@@ -224,10 +252,15 @@ export default function ClientManager() {
       )}
 
       {showForm && (
-        <form onSubmit={handleSubmit} style={styles.formCard}>
+        <form
+          onSubmit={handleSubmit}
+          style={styles.formCard}
+        >
           <div style={styles.formHeader}>
             <h2 style={styles.formTitle}>
-              {editing ? "Edit Client" : "Create Client"}
+              {editing
+                ? "Edit Client"
+                : "Create Client"}
             </h2>
 
             {editing && (
@@ -240,7 +273,10 @@ export default function ClientManager() {
           <div style={styles.formGrid}>
             {!editing && (
               <div>
-                <label style={styles.label}>User ID</label>
+                <label style={styles.label}>
+                  User ID
+                </label>
+
                 <input
                   name="userId"
                   value={form.userId}
@@ -253,7 +289,10 @@ export default function ClientManager() {
             )}
 
             <div>
-              <label style={styles.label}>Business Name</label>
+              <label style={styles.label}>
+                Business Name
+              </label>
+
               <input
                 name="businessName"
                 value={form.businessName}
@@ -265,7 +304,10 @@ export default function ClientManager() {
             </div>
 
             <div>
-              <label style={styles.label}>Phone</label>
+              <label style={styles.label}>
+                Phone
+              </label>
+
               <input
                 name="phone"
                 value={form.phone}
@@ -276,7 +318,10 @@ export default function ClientManager() {
             </div>
 
             <div>
-              <label style={styles.label}>Email</label>
+              <label style={styles.label}>
+                Email
+              </label>
+
               <input
                 type="email"
                 name="email"
@@ -289,22 +334,36 @@ export default function ClientManager() {
 
             {editing && (
               <div>
-                <label style={styles.label}>Status</label>
+                <label style={styles.label}>
+                  Status
+                </label>
+
                 <select
                   name="status"
                   value={form.status}
                   onChange={handleChange}
                   style={styles.input}
                 >
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active">
+                    Active
+                  </option>
+
+                  <option value="suspended">
+                    Suspended
+                  </option>
+
+                  <option value="inactive">
+                    Inactive
+                  </option>
                 </select>
               </div>
             )}
 
             <div style={styles.fullWidth}>
-              <label style={styles.label}>Address</label>
+              <label style={styles.label}>
+                Address
+              </label>
+
               <textarea
                 name="address"
                 value={form.address}
@@ -344,8 +403,13 @@ export default function ClientManager() {
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>
-          <h2 style={styles.cardTitle}>Clients</h2>
-          <span style={styles.count}>{clients.length}</span>
+          <h2 style={styles.cardTitle}>
+            Clients
+          </h2>
+
+          <span style={styles.count}>
+            {clients.length}
+          </span>
         </div>
 
         {loading ? (
@@ -361,11 +425,25 @@ export default function ClientManager() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Business</th>
-                  <th style={styles.th}>User</th>
-                  <th style={styles.th}>Contact</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Action</th>
+                  <th style={styles.th}>
+                    Business
+                  </th>
+
+                  <th style={styles.th}>
+                    User
+                  </th>
+
+                  <th style={styles.th}>
+                    Contact
+                  </th>
+
+                  <th style={styles.th}>
+                    Status
+                  </th>
+
+                  <th style={styles.th}>
+                    Action
+                  </th>
                 </tr>
               </thead>
 
@@ -382,6 +460,7 @@ export default function ClientManager() {
                       <div>
                         {client.name || "—"}
                       </div>
+
                       <small style={styles.small}>
                         {client.user_email ||
                           client.email ||
@@ -393,6 +472,7 @@ export default function ClientManager() {
                       <div>
                         {client.phone || "—"}
                       </div>
+
                       <small style={styles.small}>
                         {client.email || "—"}
                       </small>
@@ -416,7 +496,9 @@ export default function ClientManager() {
                     </td>
 
                     <td style={styles.td}>
-                      <div style={styles.actionGroup}>
+                      <div
+                        style={styles.actionGroup}
+                      >
                         <button
                           type="button"
                           onClick={() =>
@@ -432,7 +514,9 @@ export default function ClientManager() {
                           onClick={() =>
                             handleDelete(client.id)
                           }
-                          style={styles.deleteButton}
+                          style={
+                            styles.deleteButton
+                          }
                         >
                           Delete
                         </button>
