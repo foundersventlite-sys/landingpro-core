@@ -8,39 +8,39 @@ const TEMPLATES = [
   {
     id: "template-1",
     name: "Template 1",
-    description: "Clean and modern landing page template.",
+    description: "Clean and modern landing page.",
   },
   {
     id: "template-2",
     name: "Template 2",
-    description: "Professional business landing page template.",
+    description: "Professional business landing page.",
   },
   {
     id: "template-3",
     name: "Template 3",
-    description: "Conversion-focused landing page template.",
+    description: "Conversion-focused landing page.",
   },
   {
     id: "template-4",
     name: "Template 4",
-    description: "Premium product landing page template.",
+    description: "Premium product landing page.",
   },
   {
     id: "template-5",
     name: "Template 5",
-    description: "Modern marketing landing page template.",
+    description: "Modern marketing landing page.",
   },
 ];
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [checkingSession, setCheckingSession] = useState(true);
-  const [role, setRole] = useState("admin");
+  const [checking, setChecking] = useState(true);
+  const [loginRole, setLoginRole] = useState("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const [section, setSection] = useState("dashboard");
 
   useEffect(() => {
     checkSession();
@@ -54,27 +54,29 @@ export default function App() {
 
       const data = await response.json();
 
-      if (response.ok && data?.success) {
+      if (response.ok && data?.success && data?.data?.user) {
         setUser(data.data.user);
       }
     } catch (error) {
-      console.error("Session check failed:", error);
+      console.error(error);
     } finally {
-      setCheckingSession(false);
+      setChecking(false);
     }
   }
 
-  async function handleLogin(event) {
+  async function login(event) {
     event.preventDefault();
 
     setLoading(true);
     setMessage("");
 
     const endpoint =
-      role === "admin" ? "admin-login" : "client-login";
+      loginRole === "admin"
+        ? `${API_BASE}/admin-login`
+        : `${API_BASE}/client-login`;
 
     try {
-      const response = await fetch(`${API_BASE}/${endpoint}`, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -94,16 +96,16 @@ export default function App() {
 
       setUser(data.data.user);
       setPassword("");
-      setMessage("");
-      setActiveSection("dashboard");
+      setEmail("");
+      setSection("dashboard");
     } catch (error) {
-      setMessage(error.message || "Something went wrong");
+      setMessage(error.message || "Login failed");
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleLogout() {
+  async function logout() {
     setLoading(true);
 
     try {
@@ -111,552 +113,404 @@ export default function App() {
         method: "POST",
         credentials: "include",
       });
-
-      setUser(null);
-      setEmail("");
-      setPassword("");
-      setMessage("");
-      setActiveSection("dashboard");
-    } catch {
-      setMessage("Logout failed");
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error(error);
     }
+
+    setUser(null);
+    setSection("dashboard");
+    setEmail("");
+    setPassword("");
+    setMessage("");
+    setLoading(false);
   }
 
-  if (checkingSession) {
+  if (checking) {
     return (
-      <main style={styles.centerPage}>
+      <div style={styles.center}>
         <div style={styles.loadingCard}>
-          <div style={styles.badge}>LandingPro Core</div>
-          <h2 style={styles.loadingTitle}>
-            Checking session...
-          </h2>
-          <p style={styles.muted}>
-            Please wait while we verify your authentication.
-          </p>
+          <h2>LandingPro</h2>
+          <p>Checking session...</p>
         </div>
-      </main>
+      </div>
     );
   }
 
-  if (user) {
-    if (user.role === "admin" && activeSection === "clients") {
-      return (
-        <main style={styles.dashboardPage}>
-          <header style={styles.header}>
-            <div>
-              <div style={styles.brand}>LandingPro Core</div>
-              <div style={styles.headerSubtitle}>
-                Admin Panel
-              </div>
-            </div>
+  if (!user) {
+    return (
+      <div style={styles.center}>
+        <div style={styles.loginCard}>
+          <div style={styles.brand}>LandingPro</div>
 
+          <h1 style={styles.loginTitle}>
+            {loginRole === "admin"
+              ? "Admin Login"
+              : "Client Login"}
+          </h1>
+
+          <div style={styles.roleSwitch}>
             <button
               type="button"
-              onClick={handleLogout}
-              disabled={loading}
-              style={styles.logoutButton}
+              onClick={() => {
+                setLoginRole("admin");
+                setMessage("");
+              }}
+              style={{
+                ...styles.roleButton,
+                ...(loginRole === "admin"
+                  ? styles.activeRole
+                  : {}),
+              }}
             >
-              {loading ? "Signing out..." : "Logout"}
+              Admin
             </button>
-          </header>
-
-          <ClientManager />
-
-          <div style={styles.backButtonContainer}>
-            <button
-              type="button"
-              onClick={() => setActiveSection("dashboard")}
-              style={styles.backButton}
-            >
-              ← Back to Dashboard
-            </button>
-          </div>
-        </main>
-      );
-    }
-
-    if (
-      user.role === "client" &&
-      activeSection === "landing-pages"
-    ) {
-      return (
-        <main style={styles.dashboardPage}>
-          <header style={styles.header}>
-            <div>
-              <div style={styles.brand}>LandingPro Core</div>
-              <div style={styles.headerSubtitle}>
-                Client Panel
-              </div>
-            </div>
 
             <button
               type="button"
-              onClick={handleLogout}
-              disabled={loading}
-              style={styles.logoutButton}
+              onClick={() => {
+                setLoginRole("client");
+                setMessage("");
+              }}
+              style={{
+                ...styles.roleButton,
+                ...(loginRole === "client"
+                  ? styles.activeRole
+                  : {}),
+              }}
             >
-              {loading ? "Signing out..." : "Logout"}
-            </button>
-          </header>
-
-          <LandingPageManager />
-
-          <div style={styles.backButtonContainer}>
-            <button
-              type="button"
-              onClick={() => setActiveSection("dashboard")}
-              style={styles.backButton}
-            >
-              ← Back to Dashboard
+              Client
             </button>
           </div>
-        </main>
-      );
-    }
 
-    if (
-      user.role === "client" &&
-      activeSection === "templates"
-    ) {
-      return (
-        <main style={styles.dashboardPage}>
-          <header style={styles.header}>
-            <div>
-              <div style={styles.brand}>LandingPro Core</div>
-              <div style={styles.headerSubtitle}>
-                Client Panel
-              </div>
-            </div>
+          <form onSubmit={login}>
+            <label style={styles.label}>Email</label>
+
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={styles.input}
+              placeholder="Email address"
+            />
+
+            <label style={styles.label}>Password</label>
+
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={styles.input}
+              placeholder="Password"
+            />
 
             <button
-              type="button"
-              onClick={handleLogout}
+              type="submit"
               disabled={loading}
-              style={styles.logoutButton}
+              style={styles.loginButton}
             >
-              {loading ? "Signing out..." : "Logout"}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
-          </header>
-
-          <section style={styles.dashboardContainer}>
-            <div style={styles.welcomeCard}>
-              <div style={styles.badge}>
-                Template Preview
-              </div>
-
-              <h1 style={styles.dashboardTitle}>
-                Landing Page Templates
-              </h1>
-
-              <p style={styles.dashboardText}>
-                Choose from our available landing page templates.
-              </p>
-
-              <div style={styles.templateGrid}>
-                {TEMPLATES.map((template) => (
-                  <div
-                    key={template.id}
-                    style={styles.templateCard}
-                  >
-                    <div style={styles.templatePreview}>
-                      <span>
-                        {template.name}
-                      </span>
-                    </div>
-
-                    <h3 style={styles.templateTitle}>
-                      {template.name}
-                    </h3>
-
-                    <p style={styles.templateDescription}>
-                      {template.description}
-                    </p>
-
-                    <button
-                      type="button"
-                      style={styles.templateButton}
-                      onClick={() =>
-                        setMessage(
-                          `${template.name} selected`
-                        )
-                      }
-                    >
-                      Preview
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <div style={styles.backButtonContainer}>
-            <button
-              type="button"
-              onClick={() => setActiveSection("dashboard")}
-              style={styles.backButton}
-            >
-              ← Back to Dashboard
-            </button>
-          </div>
+          </form>
 
           {message && (
-            <div style={styles.clientMessage}>
+            <div style={styles.message}>
               {message}
             </div>
           )}
-        </main>
-      );
-    }
+        </div>
+      </div>
+    );
+  }
 
+  const isAdmin = user.role === "admin";
+  const isClient = user.role === "client";
+
+  if (isClient && section === "landing-pages") {
     return (
-      <main style={styles.dashboardPage}>
-        <header style={styles.header}>
-          <div>
-            <div style={styles.brand}>
-              LandingPro Core
-            </div>
+      <div style={styles.app}>
+        <Header
+          user={user}
+          onLogout={logout}
+          loading={loading}
+        />
 
-            <div style={styles.headerSubtitle}>
-              {user.role === "admin"
-                ? "Admin Panel"
-                : "Client Panel"}
-            </div>
-          </div>
+        <LandingPageManager />
 
+        <div style={styles.bottomBack}>
           <button
             type="button"
-            onClick={handleLogout}
-            disabled={loading}
-            style={styles.logoutButton}
+            onClick={() => setSection("dashboard")}
+            style={styles.backButton}
           >
-            {loading ? "Signing out..." : "Logout"}
+            ← Back to Dashboard
           </button>
-        </header>
+        </div>
+      </div>
+    );
+  }
 
-        <section style={styles.dashboardContainer}>
-          <div style={styles.welcomeCard}>
-            <div style={styles.badge}>
-              Authenticated
-            </div>
+  if (isAdmin && section === "clients") {
+    return (
+      <div style={styles.app}>
+        <Header
+          user={user}
+          onLogout={logout}
+          loading={loading}
+        />
 
-            <h1 style={styles.dashboardTitle}>
-              Welcome, {user.name}
-            </h1>
+        <ClientManager />
 
-            <p style={styles.dashboardText}>
-              You are successfully logged in as a{" "}
-              {user.role === "admin"
-                ? "administrator"
-                : "client"}
-              .
-            </p>
-
-            <div style={styles.infoGrid}>
-              <div style={styles.infoCard}>
-                <span style={styles.infoLabel}>
-                  Name
-                </span>
-                <strong>{user.name}</strong>
-              </div>
-
-              <div style={styles.infoCard}>
-                <span style={styles.infoLabel}>
-                  Email
-                </span>
-                <strong>{user.email}</strong>
-              </div>
-
-              <div style={styles.infoCard}>
-                <span style={styles.infoLabel}>
-                  Role
-                </span>
-                <strong>{user.role}</strong>
-              </div>
-
-              <div style={styles.infoCard}>
-                <span style={styles.infoLabel}>
-                  Status
-                </span>
-                <strong>Active</strong>
-              </div>
-            </div>
-
-            {user.role === "admin" && (
-              <div style={styles.adminActions}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveSection("clients")
-                  }
-                  style={styles.actionButton}
-                >
-                  Client Management
-                </button>
-              </div>
-            )}
-
-            {user.role === "client" && (
-              <div style={styles.clientActions}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveSection("landing-pages")
-                  }
-                  style={styles.actionButton}
-                >
-                  Landing Pages
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveSection("templates")
-                  }
-                  style={styles.secondaryActionButton}
-                >
-                  Template Preview
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
+        <div style={styles.bottomBack}>
+          <button
+            type="button"
+            onClick={() => setSection("dashboard")}
+            style={styles.backButton}
+          >
+            ← Back to Dashboard
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <main style={styles.centerPage}>
-      <section style={styles.loginCard}>
-        <div style={styles.badge}>
-          LandingPro Core
-        </div>
+    <div style={styles.app}>
+      <Header
+        user={user}
+        onLogout={logout}
+        loading={loading}
+      />
 
-        <h1 style={styles.title}>
-          {role === "admin"
-            ? "Admin Login"
-            : "Client Login"}
-        </h1>
-
-        <p style={styles.subtitle}>
-          Sign in to access your{" "}
-          {role === "admin"
-            ? "administration"
-            : "client"}{" "}
-          panel.
-        </p>
-
-        <div style={styles.roleSwitch}>
-          <button
-            type="button"
-            onClick={() => {
-              setRole("admin");
-              setMessage("");
-            }}
-            style={{
-              ...styles.roleButton,
-              ...(role === "admin"
-                ? styles.activeRoleButton
-                : {}),
-            }}
-          >
-            Admin
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setRole("client");
-              setMessage("");
-            }}
-            style={{
-              ...styles.roleButton,
-              ...(role === "client"
-                ? styles.activeRoleButton
-                : {}),
-            }}
-          >
-            Client
-          </button>
-        </div>
-
-        <form onSubmit={handleLogin}>
-          <label style={styles.label}>
-            Email
-          </label>
-
-          <input
-            type="email"
-            value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
-            placeholder={
-              role === "admin"
-                ? "admin@landingpro.local"
-                : "client@landingpro.local"
-            }
-            autoComplete="email"
-            required
-            style={styles.input}
-          />
-
-          <label style={styles.label}>
-            Password
-          </label>
-
-          <input
-            type="password"
-            value={password}
-            onChange={(event) =>
-              setPassword(event.target.value)
-            }
-            placeholder="Enter your password"
-            autoComplete="current-password"
-            required
-            style={styles.input}
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              ...styles.loginButton,
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading
-              ? "Signing in..."
-              : "Sign In"}
-          </button>
-        </form>
-
-        {message && (
-          <div style={styles.message}>
-            {message}
+      <main style={styles.main}>
+        <section style={styles.welcomeCard}>
+          <div style={styles.badge}>
+            {isAdmin ? "ADMIN PANEL" : "CLIENT PANEL"}
           </div>
-        )}
-      </section>
-    </main>
+
+          <h1 style={styles.heading}>
+            Welcome, {user.name || "User"}
+          </h1>
+
+          <p style={styles.subheading}>
+            {isAdmin
+              ? "Manage clients and the LandingPro system."
+              : "Create and manage your landing pages."}
+          </p>
+
+          {isAdmin && (
+            <div style={styles.actionGrid}>
+              <button
+                type="button"
+                onClick={() => setSection("clients")}
+                style={styles.actionCard}
+              >
+                <span style={styles.actionIcon}>👥</span>
+
+                <strong>Client Management</strong>
+
+                <small>
+                  Create and manage clients
+                </small>
+              </button>
+            </div>
+          )}
+
+          {isClient && (
+            <div style={styles.clientGrid}>
+              <button
+                type="button"
+                onClick={() =>
+                  setSection("landing-pages")
+                }
+                style={styles.primaryAction}
+              >
+                <span style={styles.bigIcon}>＋</span>
+
+                <span>
+                  <strong>Create & Manage Landing Pages</strong>
+
+                  <small>
+                    Create, edit and manage your landing pages
+                  </small>
+                </span>
+              </button>
+
+              <div style={styles.templateSection}>
+                <div>
+                  <h2 style={styles.sectionTitle}>
+                    Templates
+                  </h2>
+
+                  <p style={styles.sectionText}>
+                    Choose from your available landing page
+                    templates when creating a page.
+                  </p>
+                </div>
+
+                <div style={styles.templateGrid}>
+                  {TEMPLATES.map((template) => (
+                    <div
+                      key={template.id}
+                      style={styles.templateCard}
+                    >
+                      <div style={styles.templatePreview}>
+                        <span>{template.name}</span>
+                      </div>
+
+                      <h3 style={styles.templateName}>
+                        {template.name}
+                      </h3>
+
+                      <p style={styles.templateDescription}>
+                        {template.description}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSection("landing-pages")
+                        }
+                        style={styles.templateButton}
+                      >
+                        Use Template
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function Header({ user, onLogout, loading }) {
+  return (
+    <header style={styles.header}>
+      <div>
+        <div style={styles.headerBrand}>
+          LandingPro
+        </div>
+
+        <div style={styles.headerSub}>
+          {user.role === "admin"
+            ? "Admin Panel"
+            : "Client Dashboard"}
+        </div>
+      </div>
+
+      <div style={styles.headerRight}>
+        <span style={styles.userEmail}>
+          {user.email}
+        </span>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          disabled={loading}
+          style={styles.logout}
+        >
+          {loading ? "..." : "Logout"}
+        </button>
+      </div>
+    </header>
   );
 }
 
 const styles = {
-  centerPage: {
+  app: {
+    minHeight: "100vh",
+    background: "#f8fafc",
+    color: "#0f172a",
+    fontFamily:
+      "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+  },
+
+  center: {
     minHeight: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    background: "#f8fafc",
     padding: "24px",
     boxSizing: "border-box",
-    background: "#f8fafc",
-    fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    color: "#0f172a",
+  },
+
+  loadingCard: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "18px",
+    padding: "32px",
+    textAlign: "center",
   },
 
   loginCard: {
     width: "100%",
     maxWidth: "420px",
-    background: "#ffffff",
+    background: "#fff",
     border: "1px solid #e2e8f0",
     borderRadius: "20px",
     padding: "32px",
     boxSizing: "border-box",
     boxShadow:
-      "0 20px 60px rgba(15, 23, 42, 0.08)",
+      "0 20px 60px rgba(15,23,42,.08)",
   },
 
-  loadingCard: {
-    width: "100%",
-    maxWidth: "420px",
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "20px",
-    padding: "32px",
-    boxSizing: "border-box",
-    textAlign: "center",
+  brand: {
+    fontSize: "20px",
+    fontWeight: 900,
+    marginBottom: "22px",
   },
 
-  badge: {
-    display: "inline-block",
-    padding: "7px 12px",
-    borderRadius: "999px",
-    background: "#ecfdf5",
-    color: "#047857",
-    fontSize: "13px",
-    fontWeight: 700,
-    marginBottom: "16px",
-  },
-
-  title: {
-    margin: "0 0 8px",
-    fontSize: "30px",
-    letterSpacing: "-0.03em",
-  },
-
-  loadingTitle: {
-    margin: "0 0 8px",
-    fontSize: "24px",
-  },
-
-  subtitle: {
+  loginTitle: {
     margin: "0 0 20px",
-    color: "#64748b",
-    lineHeight: 1.6,
-  },
-
-  muted: {
-    margin: 0,
-    color: "#64748b",
-    lineHeight: 1.6,
+    fontSize: "28px",
   },
 
   roleSwitch: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "8px",
-    marginBottom: "22px",
-    padding: "4px",
+    gap: "6px",
+    padding: "5px",
     background: "#f1f5f9",
     borderRadius: "10px",
+    marginBottom: "22px",
   },
 
   roleButton: {
     border: 0,
-    borderRadius: "8px",
     padding: "10px",
+    borderRadius: "8px",
     background: "transparent",
-    color: "#64748b",
-    fontSize: "14px",
-    fontWeight: 700,
     cursor: "pointer",
+    fontWeight: 700,
   },
 
-  activeRoleButton: {
-    background: "#ffffff",
-    color: "#0f172a",
-    boxShadow:
-      "0 1px 4px rgba(15, 23, 42, 0.08)",
+  activeRole: {
+    background: "#fff",
+    boxShadow: "0 1px 5px rgba(0,0,0,.08)",
   },
 
   label: {
     display: "block",
-    marginBottom: "8px",
+    marginBottom: "7px",
     fontSize: "14px",
-    fontWeight: 600,
+    fontWeight: 700,
   },
 
   input: {
     width: "100%",
     boxSizing: "border-box",
-    padding: "13px 14px",
     border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    outline: "none",
-    fontSize: "15px",
+    borderRadius: "9px",
+    padding: "13px",
     marginBottom: "18px",
+    fontSize: "14px",
+    outline: "none",
   },
 
   loginButton: {
@@ -665,202 +519,197 @@ const styles = {
     borderRadius: "10px",
     padding: "14px",
     background: "#0f172a",
-    color: "#ffffff",
-    fontSize: "15px",
-    fontWeight: 700,
+    color: "#fff",
+    fontWeight: 800,
     cursor: "pointer",
   },
 
   message: {
-    marginTop: "20px",
-    padding: "12px 14px",
-    borderRadius: "10px",
-    background: "#f1f5f9",
-    color: "#334155",
+    marginTop: "16px",
+    padding: "12px",
+    borderRadius: "9px",
+    background: "#fef2f2",
+    color: "#b91c1c",
     fontSize: "14px",
-    lineHeight: 1.5,
-  },
-
-  dashboardPage: {
-    minHeight: "100vh",
-    background: "#f8fafc",
-    fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    color: "#0f172a",
   },
 
   header: {
     minHeight: "72px",
+    padding: "0 24px",
+    background: "#fff",
+    borderBottom: "1px solid #e2e8f0",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 24px",
-    background: "#ffffff",
-    borderBottom: "1px solid #e2e8f0",
     boxSizing: "border-box",
   },
 
-  brand: {
-    fontSize: "18px",
-    fontWeight: 800,
+  headerBrand: {
+    fontSize: "19px",
+    fontWeight: 900,
   },
 
-  headerSubtitle: {
+  headerSub: {
     marginTop: "3px",
+    fontSize: "12px",
+    color: "#64748b",
+  },
+
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+  },
+
+  userEmail: {
     fontSize: "13px",
     color: "#64748b",
   },
 
-  logoutButton: {
+  logout: {
     border: "1px solid #cbd5e1",
     borderRadius: "9px",
-    padding: "10px 16px",
-    background: "#ffffff",
-    color: "#0f172a",
-    fontSize: "14px",
+    padding: "9px 14px",
+    background: "#fff",
     fontWeight: 700,
     cursor: "pointer",
   },
 
-  dashboardContainer: {
-    maxWidth: "1100px",
+  main: {
+    maxWidth: "1200px",
     margin: "0 auto",
     padding: "32px 24px",
     boxSizing: "border-box",
   },
 
   welcomeCard: {
-    background: "#ffffff",
+    background: "#fff",
     border: "1px solid #e2e8f0",
     borderRadius: "20px",
     padding: "32px",
     boxShadow:
-      "0 12px 40px rgba(15, 23, 42, 0.05)",
+      "0 10px 40px rgba(15,23,42,.04)",
   },
 
-  dashboardTitle: {
-    margin: "0 0 10px",
+  badge: {
+    display: "inline-block",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    background: "#ecfdf5",
+    color: "#047857",
+    fontSize: "11px",
+    fontWeight: 900,
+    marginBottom: "14px",
+  },
+
+  heading: {
+    margin: 0,
     fontSize: "34px",
-    letterSpacing: "-0.03em",
+    letterSpacing: "-.03em",
   },
 
-  dashboardText: {
-    margin: "0 0 28px",
+  subheading: {
+    margin: "10px 0 28px",
     color: "#64748b",
     lineHeight: 1.6,
   },
 
-  infoGrid: {
+  actionGrid: {
     display: "grid",
     gridTemplateColumns:
-      "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: "14px",
+      "repeat(auto-fit,minmax(240px,1fr))",
+    gap: "16px",
   },
 
-  infoCard: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "7px",
-    padding: "18px",
+  actionCard: {
     border: "1px solid #e2e8f0",
     borderRadius: "14px",
-    background: "#f8fafc",
-  },
-
-  infoLabel: {
-    fontSize: "12px",
-    color: "#64748b",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    fontWeight: 700,
-  },
-
-  adminActions: {
-    marginTop: "28px",
-    paddingTop: "24px",
-    borderTop: "1px solid #e2e8f0",
-  },
-
-  clientActions: {
+    padding: "20px",
+    background: "#fff",
+    textAlign: "left",
+    cursor: "pointer",
     display: "flex",
-    flexWrap: "wrap",
-    gap: "12px",
-    marginTop: "28px",
-    paddingTop: "24px",
-    borderTop: "1px solid #e2e8f0",
+    flexDirection: "column",
+    gap: "8px",
   },
 
-  actionButton: {
+  actionIcon: {
+    fontSize: "28px",
+  },
+
+  clientGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+  },
+
+  primaryAction: {
+    width: "100%",
     border: 0,
-    borderRadius: "10px",
-    padding: "12px 18px",
+    borderRadius: "14px",
+    padding: "20px",
     background: "#0f172a",
-    color: "#ffffff",
-    fontWeight: 700,
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    textAlign: "left",
     cursor: "pointer",
   },
 
-  secondaryActionButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "12px 18px",
-    background: "#ffffff",
-    color: "#0f172a",
-    fontWeight: 700,
-    cursor: "pointer",
+  bigIcon: {
+    fontSize: "34px",
+    lineHeight: 1,
   },
 
-  backButtonContainer: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "0 24px 32px",
+  templateSection: {
+    paddingTop: "4px",
   },
 
-  backButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "9px",
-    padding: "10px 16px",
-    background: "#ffffff",
-    color: "#0f172a",
-    fontWeight: 700,
-    cursor: "pointer",
+  sectionTitle: {
+    margin: 0,
+    fontSize: "22px",
+  },
+
+  sectionText: {
+    margin: "7px 0 18px",
+    color: "#64748b",
   },
 
   templateGrid: {
     display: "grid",
     gridTemplateColumns:
-      "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "18px",
+      "repeat(auto-fit,minmax(210px,1fr))",
+    gap: "16px",
   },
 
   templateCard: {
     border: "1px solid #e2e8f0",
-    borderRadius: "16px",
-    padding: "16px",
-    background: "#ffffff",
+    borderRadius: "14px",
+    padding: "14px",
+    background: "#fff",
   },
 
   templatePreview: {
-    height: "150px",
-    borderRadius: "12px",
+    height: "120px",
+    borderRadius: "10px",
     background:
-      "linear-gradient(135deg, #e2e8f0, #f8fafc)",
+      "linear-gradient(135deg,#e2e8f0,#f8fafc)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    fontWeight: 900,
     color: "#475569",
-    fontSize: "18px",
-    fontWeight: 800,
-    marginBottom: "14px",
+    marginBottom: "13px",
   },
 
-  templateTitle: {
-    margin: "0 0 7px",
-    fontSize: "17px",
+  templateName: {
+    margin: "0 0 6px",
+    fontSize: "16px",
   },
 
   templateDescription: {
-    margin: "0 0 14px",
+    margin: "0 0 13px",
     color: "#64748b",
     fontSize: "13px",
     lineHeight: 1.5,
@@ -871,22 +720,23 @@ const styles = {
     border: "1px solid #cbd5e1",
     borderRadius: "9px",
     padding: "10px",
-    background: "#ffffff",
-    color: "#0f172a",
+    background: "#fff",
     fontWeight: 700,
     cursor: "pointer",
   },
 
-  clientMessage: {
-    position: "fixed",
-    right: "20px",
-    bottom: "20px",
-    padding: "12px 16px",
-    borderRadius: "10px",
-    background: "#0f172a",
-    color: "#ffffff",
-    fontSize: "14px",
-    boxShadow:
-      "0 10px 30px rgba(15, 23, 42, 0.2)",
+  bottomBack: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "0 24px 32px",
+  },
+
+  backButton: {
+    border: "1px solid #cbd5e1",
+    borderRadius: "9px",
+    padding: "10px 15px",
+    background: "#fff",
+    fontWeight: 700,
+    cursor: "pointer",
   },
 };
