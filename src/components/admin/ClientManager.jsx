@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 
 const EMPTY_FORM = {
-  userId: "",
+  name: "",
+  email: "",
+  password: "",
   businessName: "",
   phone: "",
-  email: "",
   address: "",
 };
 
@@ -31,9 +32,7 @@ export default function ClientManager() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Failed to load clients"
-        );
+        throw new Error(data.message || "Failed to load clients");
       }
 
       setClients(data.data?.clients || []);
@@ -60,45 +59,36 @@ export default function ClientManager() {
     setMessage("");
 
     try {
-      const response = await fetch(
-        "/api/clients/create",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            userId: form.userId.trim(),
-            businessName: form.businessName.trim(),
-            phone: form.phone.trim(),
-            email: form.email.trim().toLowerCase(),
-            address: form.address.trim(),
-          }),
-        }
-      );
+      const response = await fetch("/api/clients/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          businessName: form.businessName.trim(),
+          phone: form.phone.trim(),
+          address: form.address.trim(),
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Failed to create client"
-        );
+        throw new Error(data.message || "Failed to create client");
       }
 
       setMessage("Client created successfully");
 
-      setClients((current) => [
-        data.data.client,
-        ...current,
-      ]);
-
       setForm(EMPTY_FORM);
       setShowForm(false);
+
+      await loadClients();
     } catch (error) {
-      setMessage(
-        error.message || "Failed to create client"
-      );
+      setMessage(error.message || "Failed to create client");
     } finally {
       setSaving(false);
     }
@@ -206,14 +196,43 @@ export default function ClientManager() {
             }}
           >
             <div>
-              <label>User ID</label>
+              <label>Name</label>
 
               <input
-                name="userId"
-                value={form.userId}
+                name="name"
+                value={form.name}
                 onChange={handleChange}
-                placeholder="client-001"
+                placeholder="Client Name"
                 required
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label>Email</label>
+
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="client@example.com"
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label>Password</label>
+
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Minimum 6 characters"
+                required
+                minLength={6}
                 style={inputStyle}
               />
             </div>
@@ -239,20 +258,6 @@ export default function ClientManager() {
                 value={form.phone}
                 onChange={handleChange}
                 placeholder="01700000000"
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label>Email</label>
-
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="client@example.com"
-                required
                 style={inputStyle}
               />
             </div>
@@ -286,14 +291,10 @@ export default function ClientManager() {
               background: "#0f172a",
               color: "#fff",
               fontWeight: 700,
-              cursor: saving
-                ? "not-allowed"
-                : "pointer",
+              cursor: saving ? "not-allowed" : "pointer",
             }}
           >
-            {saving
-              ? "Creating..."
-              : "Create Client"}
+            {saving ? "Creating..." : "Create Client"}
           </button>
         </form>
       )}
@@ -312,25 +313,15 @@ export default function ClientManager() {
             borderBottom: "1px solid #e2e8f0",
           }}
         >
-          <h2 style={{ margin: 0 }}>
-            Clients
-          </h2>
+          <h2 style={{ margin: 0 }}>Clients</h2>
         </div>
 
         {loading ? (
-          <div style={emptyStyle}>
-            Loading clients...
-          </div>
+          <div style={emptyStyle}>Loading clients...</div>
         ) : clients.length === 0 ? (
-          <div style={emptyStyle}>
-            No clients found.
-          </div>
+          <div style={emptyStyle}>No clients found.</div>
         ) : (
-          <div
-            style={{
-              overflowX: "auto",
-            }}
-          >
+          <div style={{ overflowX: "auto" }}>
             <table
               style={{
                 width: "100%",
@@ -340,25 +331,11 @@ export default function ClientManager() {
             >
               <thead>
                 <tr>
-                  <th style={thStyle}>
-                    Business
-                  </th>
-
-                  <th style={thStyle}>
-                    User
-                  </th>
-
-                  <th style={thStyle}>
-                    Phone
-                  </th>
-
-                  <th style={thStyle}>
-                    Email
-                  </th>
-
-                  <th style={thStyle}>
-                    Status
-                  </th>
+                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Business</th>
+                  <th style={thStyle}>Phone</th>
+                  <th style={thStyle}>Email</th>
+                  <th style={thStyle}>Status</th>
                 </tr>
               </thead>
 
@@ -366,11 +343,11 @@ export default function ClientManager() {
                 {clients.map((client) => (
                   <tr key={client.id}>
                     <td style={tdStyle}>
-                      {client.business_name}
+                      {client.name || "—"}
                     </td>
 
                     <td style={tdStyle}>
-                      {client.user_id}
+                      {client.business_name}
                     </td>
 
                     <td style={tdStyle}>
