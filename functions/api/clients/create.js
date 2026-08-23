@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 export async function onRequestPost(context) {
   try {
     const { request, env } = context;
@@ -69,7 +67,7 @@ export async function onRequestPost(context) {
       );
     }
 
-    const clientId = randomUUID();
+    const clientId = crypto.randomUUID();
 
     await env.DB.prepare(
       `INSERT INTO clients (
@@ -127,7 +125,7 @@ export async function onRequestPost(context) {
     return Response.json(
       {
         success: false,
-        message: "Internal server error",
+        message: error?.message || "Internal server error",
       },
       { status: 500 }
     );
