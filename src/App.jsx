@@ -4,6 +4,34 @@ import LandingPageManager from "./components/client/LandingPageManager";
 
 const API_BASE = "/api/auth";
 
+const TEMPLATES = [
+  {
+    id: "template-1",
+    name: "Template 1",
+    description: "Clean and modern landing page template.",
+  },
+  {
+    id: "template-2",
+    name: "Template 2",
+    description: "Professional business landing page template.",
+  },
+  {
+    id: "template-3",
+    name: "Template 3",
+    description: "Conversion-focused landing page template.",
+  },
+  {
+    id: "template-4",
+    name: "Template 4",
+    description: "Premium product landing page template.",
+  },
+  {
+    id: "template-5",
+    name: "Template 5",
+    description: "Modern marketing landing page template.",
+  },
+];
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -101,11 +129,9 @@ export default function App() {
       <main style={styles.centerPage}>
         <div style={styles.loadingCard}>
           <div style={styles.badge}>LandingPro Core</div>
-
           <h2 style={styles.loadingTitle}>
             Checking session...
           </h2>
-
           <p style={styles.muted}>
             Please wait while we verify your authentication.
           </p>
@@ -115,18 +141,12 @@ export default function App() {
   }
 
   if (user) {
-    if (
-      user.role === "admin" &&
-      activeSection === "clients"
-    ) {
+    if (user.role === "admin" && activeSection === "clients") {
       return (
         <main style={styles.dashboardPage}>
           <header style={styles.header}>
             <div>
-              <div style={styles.brand}>
-                LandingPro Core
-              </div>
-
+              <div style={styles.brand}>LandingPro Core</div>
               <div style={styles.headerSubtitle}>
                 Admin Panel
               </div>
@@ -147,9 +167,7 @@ export default function App() {
           <div style={styles.backButtonContainer}>
             <button
               type="button"
-              onClick={() =>
-                setActiveSection("dashboard")
-              }
+              onClick={() => setActiveSection("dashboard")}
               style={styles.backButton}
             >
               ← Back to Dashboard
@@ -167,10 +185,7 @@ export default function App() {
         <main style={styles.dashboardPage}>
           <header style={styles.header}>
             <div>
-              <div style={styles.brand}>
-                LandingPro Core
-              </div>
-
+              <div style={styles.brand}>LandingPro Core</div>
               <div style={styles.headerSubtitle}>
                 Client Panel
               </div>
@@ -186,25 +201,111 @@ export default function App() {
             </button>
           </header>
 
-          <LandingPageManager
-            clientId={
-              user.client_id ||
-              user.clientId ||
-              user.id
-            }
-          />
+          <LandingPageManager />
 
           <div style={styles.backButtonContainer}>
             <button
               type="button"
-              onClick={() =>
-                setActiveSection("dashboard")
-              }
+              onClick={() => setActiveSection("dashboard")}
               style={styles.backButton}
             >
               ← Back to Dashboard
             </button>
           </div>
+        </main>
+      );
+    }
+
+    if (
+      user.role === "client" &&
+      activeSection === "templates"
+    ) {
+      return (
+        <main style={styles.dashboardPage}>
+          <header style={styles.header}>
+            <div>
+              <div style={styles.brand}>LandingPro Core</div>
+              <div style={styles.headerSubtitle}>
+                Client Panel
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loading}
+              style={styles.logoutButton}
+            >
+              {loading ? "Signing out..." : "Logout"}
+            </button>
+          </header>
+
+          <section style={styles.dashboardContainer}>
+            <div style={styles.welcomeCard}>
+              <div style={styles.badge}>
+                Template Preview
+              </div>
+
+              <h1 style={styles.dashboardTitle}>
+                Landing Page Templates
+              </h1>
+
+              <p style={styles.dashboardText}>
+                Choose from our available landing page templates.
+              </p>
+
+              <div style={styles.templateGrid}>
+                {TEMPLATES.map((template) => (
+                  <div
+                    key={template.id}
+                    style={styles.templateCard}
+                  >
+                    <div style={styles.templatePreview}>
+                      <span>
+                        {template.name}
+                      </span>
+                    </div>
+
+                    <h3 style={styles.templateTitle}>
+                      {template.name}
+                    </h3>
+
+                    <p style={styles.templateDescription}>
+                      {template.description}
+                    </p>
+
+                    <button
+                      type="button"
+                      style={styles.templateButton}
+                      onClick={() =>
+                        setMessage(
+                          `${template.name} selected`
+                        )
+                      }
+                    >
+                      Preview
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <div style={styles.backButtonContainer}>
+            <button
+              type="button"
+              onClick={() => setActiveSection("dashboard")}
+              style={styles.backButton}
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
+
+          {message && (
+            <div style={styles.clientMessage}>
+              {message}
+            </div>
+          )}
         </main>
       );
     }
@@ -248,7 +349,8 @@ export default function App() {
               You are successfully logged in as a{" "}
               {user.role === "admin"
                 ? "administrator"
-                : "client"}.
+                : "client"}
+              .
             </p>
 
             <div style={styles.infoGrid}>
@@ -256,7 +358,6 @@ export default function App() {
                 <span style={styles.infoLabel}>
                   Name
                 </span>
-
                 <strong>{user.name}</strong>
               </div>
 
@@ -264,7 +365,6 @@ export default function App() {
                 <span style={styles.infoLabel}>
                   Email
                 </span>
-
                 <strong>{user.email}</strong>
               </div>
 
@@ -272,7 +372,6 @@ export default function App() {
                 <span style={styles.infoLabel}>
                   Role
                 </span>
-
                 <strong>{user.role}</strong>
               </div>
 
@@ -280,7 +379,6 @@ export default function App() {
                 <span style={styles.infoLabel}>
                   Status
                 </span>
-
                 <strong>Active</strong>
               </div>
             </div>
@@ -300,7 +398,7 @@ export default function App() {
             )}
 
             {user.role === "client" && (
-              <div style={styles.adminActions}>
+              <div style={styles.clientActions}>
                 <button
                   type="button"
                   onClick={() =>
@@ -309,6 +407,16 @@ export default function App() {
                   style={styles.actionButton}
                 >
                   Landing Pages
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveSection("templates")
+                  }
+                  style={styles.secondaryActionButton}
+                >
+                  Template Preview
                 </button>
               </div>
             )}
@@ -673,12 +781,31 @@ const styles = {
     borderTop: "1px solid #e2e8f0",
   },
 
+  clientActions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "12px",
+    marginTop: "28px",
+    paddingTop: "24px",
+    borderTop: "1px solid #e2e8f0",
+  },
+
   actionButton: {
     border: 0,
     borderRadius: "10px",
     padding: "12px 18px",
     background: "#0f172a",
     color: "#ffffff",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  secondaryActionButton: {
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "12px 18px",
+    background: "#ffffff",
+    color: "#0f172a",
     fontWeight: 700,
     cursor: "pointer",
   },
@@ -697,5 +824,69 @@ const styles = {
     color: "#0f172a",
     fontWeight: 700,
     cursor: "pointer",
+  },
+
+  templateGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: "18px",
+  },
+
+  templateCard: {
+    border: "1px solid #e2e8f0",
+    borderRadius: "16px",
+    padding: "16px",
+    background: "#ffffff",
+  },
+
+  templatePreview: {
+    height: "150px",
+    borderRadius: "12px",
+    background:
+      "linear-gradient(135deg, #e2e8f0, #f8fafc)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#475569",
+    fontSize: "18px",
+    fontWeight: 800,
+    marginBottom: "14px",
+  },
+
+  templateTitle: {
+    margin: "0 0 7px",
+    fontSize: "17px",
+  },
+
+  templateDescription: {
+    margin: "0 0 14px",
+    color: "#64748b",
+    fontSize: "13px",
+    lineHeight: 1.5,
+  },
+
+  templateButton: {
+    width: "100%",
+    border: "1px solid #cbd5e1",
+    borderRadius: "9px",
+    padding: "10px",
+    background: "#ffffff",
+    color: "#0f172a",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  clientMessage: {
+    position: "fixed",
+    right: "20px",
+    bottom: "20px",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    background: "#0f172a",
+    color: "#ffffff",
+    fontSize: "14px",
+    boxShadow:
+      "0 10px 30px rgba(15, 23, 42, 0.2)",
   },
 };
